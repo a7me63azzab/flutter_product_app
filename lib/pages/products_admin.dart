@@ -8,7 +8,8 @@ class ProductsAdminPage extends StatelessWidget {
   final Function updateProduct;
   final List<Map<String, dynamic>> products;
 
-  ProductsAdminPage(this.addProduct, this.deleteProduct,this.updateProduct, this.products);
+  ProductsAdminPage(
+      this.addProduct, this.deleteProduct, this.updateProduct, this.products);
 
   Widget _buildSideDrawer(BuildContext context) {
     return Drawer(
@@ -22,7 +23,7 @@ class ProductsAdminPage extends StatelessWidget {
             leading: Icon(Icons.shop),
             title: Text('All Products'),
             onTap: () {
-              Navigator.pushReplacementNamed(context, '/');
+              Navigator.pushReplacementNamed(context, '/products');
             })
       ],
     ));
@@ -50,8 +51,8 @@ class ProductsAdminPage extends StatelessWidget {
         ),
         body: TabBarView(
           children: <Widget>[
-            ProductEditPage(addProduct:addProduct),
-            ProductListPage(products,updateProduct),
+            ProductEditPage(addProduct: addProduct),
+            ProductListPage(products, updateProduct, deleteProduct),
           ],
         ),
       ),
