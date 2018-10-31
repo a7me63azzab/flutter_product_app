@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../widgets/ui_elements/title_default.dart';
+import 'package:scoped_model/scoped_model.dart';
+import 'package:flutter_course/widgets/ui_elements/title_default.dart';
+import 'package:flutter_course/scopped_models/main.dart';
+import 'package:flutter_course/models/product.dart';
 
 class ProductPage extends StatelessWidget {
-  final String title;
-  final String imageUrl;
-  final String description;
-  final double price;
-  ProductPage(this.title, this.imageUrl, this.price, this.description);
+  final int productIndex;
+  ProductPage(this.productIndex);
 
-  Widget _buildAddressPriceRow() {
+  Widget _buildAddressPriceRow(Product product) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
@@ -25,7 +25,7 @@ class ProductPage extends StatelessWidget {
           ),
         ),
         Text(
-          '\$' + price.toString(),
+          '\$' + product.price.toString(),
           style: TextStyle(fontFamily: 'Oswald', color: Colors.grey),
         )
       ],
@@ -59,29 +59,30 @@ class ProductPage extends StatelessWidget {
   }
 
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () {
-        print('Back Button Pressed');
-        Navigator.pop(context, false);
-        return Future.value(false);
-      },
-      child: Scaffold(
+    return WillPopScope(onWillPop: () {
+      print('Back Button Pressed');
+      Navigator.pop(context, false);
+      return Future.value(false);
+    }, child: ScopedModelDescendant<MainModel>(
+        builder: (BuildContext context, Widget child, MainModel model) {
+      final product = model.products[productIndex];
+      return Scaffold(
         appBar: AppBar(
-          title: new Text(title),
+          title: new Text(product.title),
         ),
         body: new Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Image.asset(imageUrl),
+              Image.asset(product.image),
               Container(
                 padding: const EdgeInsets.all(10.0),
-                child: TitleDefault(title),
+                child: TitleDefault(product.title),
               ),
-              _buildAddressPriceRow(),
+              _buildAddressPriceRow(product),
               Container(
                 padding: EdgeInsets.all(10.0),
                 child: Text(
-                  description,
+                  product.description,
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -93,7 +94,7 @@ class ProductPage extends StatelessWidget {
                     onPressed: () => _showWarningDialog(context),
                   )),
             ]),
-      ),
-    );
+      );
+    }));
   }
 }
