@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:scoped_model/scoped_model.dart';
 import 'package:flutter_course/widgets/ui_elements/title_default.dart';
-import 'package:flutter_course/scopped_models/main.dart';
 import 'package:flutter_course/models/product.dart';
 
 class ProductPage extends StatelessWidget {
-  final int productIndex;
-  ProductPage(this.productIndex);
-
+  final Product product;
+  ProductPage(this.product);
   Widget _buildAddressPriceRow(Product product) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -59,42 +56,45 @@ class ProductPage extends StatelessWidget {
   }
 
   Widget build(BuildContext context) {
-    return WillPopScope(onWillPop: () {
-      print('Back Button Pressed');
-      Navigator.pop(context, false);
-      return Future.value(false);
-    }, child: ScopedModelDescendant<MainModel>(
-        builder: (BuildContext context, Widget child, MainModel model) {
-      final product = model.products[productIndex];
-      return Scaffold(
-        appBar: AppBar(
-          title: new Text(product.title),
-        ),
-        body: new Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Image.asset(product.image),
-              Container(
-                padding: const EdgeInsets.all(10.0),
-                child: TitleDefault(product.title),
-              ),
-              _buildAddressPriceRow(product),
-              Container(
-                padding: EdgeInsets.all(10.0),
-                child: Text(
-                  product.description,
-                  textAlign: TextAlign.center,
+    return WillPopScope(
+        onWillPop: () {
+          print('Back Button Pressed');
+          Navigator.pop(context, false);
+          return Future.value(false);
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: new Text(product.title),
+          ),
+          body: new Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                FadeInImage(
+                  image: NetworkImage(product.image),
+                  height: 300.0,
+                  fit: BoxFit.cover,
+                  placeholder: AssetImage('assets/images/food.jpg'),
                 ),
-              ),
-              Container(
+                Container(
                   padding: const EdgeInsets.all(10.0),
-                  child: new RaisedButton(
-                    color: Theme.of(context).accentColor,
-                    child: new Text('Delete'),
-                    onPressed: () => _showWarningDialog(context),
-                  )),
-            ]),
-      );
-    }));
+                  child: TitleDefault(product.title),
+                ),
+                _buildAddressPriceRow(product),
+                Container(
+                  padding: EdgeInsets.all(10.0),
+                  child: Text(
+                    product.description,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Container(
+                    padding: const EdgeInsets.all(10.0),
+                    child: new RaisedButton(
+                      color: Theme.of(context).accentColor,
+                      child: new Text('Delete'),
+                      onPressed: () => _showWarningDialog(context),
+                    )),
+              ]),
+        ));
   }
 }

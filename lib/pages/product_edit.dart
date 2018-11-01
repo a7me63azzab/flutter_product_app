@@ -85,12 +85,18 @@ class _ProductStatePage extends State<ProductEditPage> {
   Widget _buildSubmitButton() {
     return ScopedModelDescendant<MainModel>(
         builder: (BuildContext context, Widget child, MainModel model) {
-      return RaisedButton(
-        textColor: Colors.white,
-        child: Text('Save'),
-        onPressed: () => _submitForm(model.addProduct, model.updateProduct,model.selectedProduct,model.selectProduct
-            ,model.selectedProductindex),
-      );
+      return model.isLoading
+          ? Center(child: CircularProgressIndicator())
+          : RaisedButton(
+              textColor: Colors.white,
+              child: Text('Save'),
+              onPressed: () => _submitForm(
+                  model.addProduct,
+                  model.updateProduct,
+                  model.selectedProduct,
+                  model.selectProduct,
+                  model.selectedProductIndex),
+            );
     });
   }
 
@@ -123,20 +129,41 @@ class _ProductStatePage extends State<ProductEditPage> {
     );
   }
 
-  void _submitForm(Function addProduct, Function updateProduct,Product currentProduct,Function selectProduct,
+  void _submitForm(Function addProduct, Function updateProduct,
+      Product currentProduct, Function selectProduct,
       [int selectedProductIndex]) {
     if (!_formKey.currentState.validate()) {
       return;
     }
     _formKey.currentState.save();
 
-    if (selectedProductIndex == null) {
+    if (selectedProductIndex == -1) {
       addProduct(
         _formData['title'],
         _formData['description'],
         _formData['image'],
         _formData['price'],
-      );
+      ).then((bool success) {
+        if (success) {
+          Navigator.pushReplacementNamed(context, '/products')
+              .then((_) => selectProduct(null));
+        } else {
+          showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Text('Something went wrong!'),
+                  content: Text('Please try again.'),
+                  actions: <Widget>[
+                    FlatButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Okey'),
+                    ),
+                  ],
+                );
+              });
+        }
+      });
     } else {
       updateProduct(
         _formData['title'],
@@ -144,9 +171,9 @@ class _ProductStatePage extends State<ProductEditPage> {
         _formData['image'],
         _formData['price'],
         currentProduct.isFavorite,
-      );
+      ).then((_) => Navigator.pushReplacementNamed(context, '/products')
+          .then((_) => selectProduct(null)));
     }
-    Navigator.pushReplacementNamed(context, '/products').then((_)=>selectProduct(null));
   }
 
   @override
@@ -155,7 +182,7 @@ class _ProductStatePage extends State<ProductEditPage> {
         builder: (BuildContext context, Widget child, MainModel model) {
       final Widget pageContent =
           _buildPageContent(context, model.selectedProduct);
-      return model.selectedProductindex == null
+      return model.selectedProductIndex == -1
           ? pageContent
           : Scaffold(
               appBar: AppBar(

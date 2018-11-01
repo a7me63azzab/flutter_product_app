@@ -4,13 +4,28 @@ import 'package:scoped_model/scoped_model.dart';
 import 'package:flutter_course/scopped_models/main.dart';
 // import '../models/product.dart';
 
-class ProductListPage extends StatelessWidget {
-  Widget _buildEditButton(
-      BuildContext context, int index, MainModel model) {
+class ProductListPage extends StatefulWidget {
+  final MainModel model;
+
+  ProductListPage(this.model);
+
+  @override
+  State<StatefulWidget> createState() {
+    return ProductListPageState();
+  }
+}
+
+class ProductListPageState extends State<ProductListPage> {
+  initState() {
+    widget.model.fetchProducts();
+    super.initState();
+  }
+
+  Widget _buildEditButton(BuildContext context, int index, MainModel model) {
     return IconButton(
       icon: Icon(Icons.edit),
       onPressed: () {
-        model.selectProduct(index);
+        model.selectProduct(model.products[index].id);
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (BuildContext context) {
           return ProductEditPage();
@@ -29,7 +44,7 @@ class ProductListPage extends StatelessWidget {
                 key: Key(model.products[index].title),
                 onDismissed: (DismissDirection direction) {
                   if (direction == DismissDirection.endToStart) {
-                    model.selectProduct(index);
+                    model.selectProduct(model.products[index].id);
                     model.deleteProduct();
                   }
                 },
@@ -39,7 +54,7 @@ class ProductListPage extends StatelessWidget {
                     ListTile(
                       leading: CircleAvatar(
                           backgroundImage:
-                              AssetImage(model.products[index].image)),
+                              NetworkImage(model.products[index].image)),
                       title: Text(model.products[index].title),
                       subtitle:
                           Text('\$${model.products[index].price.toString()}'),
