@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_course/widgets/products/products.dart';
 import 'package:scoped_model/scoped_model.dart';
 import 'package:flutter_course/scopped_models/main.dart';
+import 'package:flutter_course/widgets/ui_elements/logout_list_tile.dart';
 
 class ProductsPage extends StatefulWidget {
   final MainModel model;
@@ -30,7 +31,9 @@ class _ProductsPageState extends State<ProductsPage> {
             title: Text('Manage Products'),
             onTap: () {
               Navigator.pushReplacementNamed(context, '/admin');
-            })
+            }),
+        Divider(),
+        LogoutListTile()
       ]),
     );
   }
