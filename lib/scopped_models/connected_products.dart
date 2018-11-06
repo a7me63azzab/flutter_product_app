@@ -1,12 +1,18 @@
+//dart packages
 import 'dart:convert';
 import 'dart:async';
+
+//third_party packages
 import 'package:scoped_model/scoped_model.dart';
-import 'package:flutter_course/models/product.dart';
-import 'package:flutter_course/models/user.dart';
-import 'package:flutter_course/models/auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:http/http.dart' as http;
+
+// current project files
+import 'package:flutter_course/models/product.dart';
+import 'package:flutter_course/models/user.dart';
+import 'package:flutter_course/models/auth.dart';
+import 'package:flutter_course/models/location_data.dart';
 
 class ConnectedProductsModel extends Model {
   List<Product> _products = [];
@@ -52,15 +58,18 @@ class ProductsModel extends ConnectedProductsModel {
     });
   }
 
-  Future<bool> addProduct(
-      String title, String description, String image, double price) {
+  Future<bool> addProduct(String title, String description, String image,
+      double price, LocationData locData) {
     final Map<String, dynamic> productData = {
       'title': title,
       'description': description,
       'image': 'https://i.imgur.com/34qXMRk.jpg',
       'price': price,
       'userEmail': _authenticatedUser.email,
-      'userId': _authenticatedUser.id
+      'userId': _authenticatedUser.id,
+      'loc_lat': locData.latitude,
+      'loc_lng': locData.longitude,
+      'loc_address': locData.address,
     };
     _isLoading = true;
     notifyListeners();
@@ -81,6 +90,7 @@ class ProductsModel extends ConnectedProductsModel {
           description: description,
           image: image,
           price: price,
+          location: locData,
           userEmail: _authenticatedUser.email,
           userId: _authenticatedUser.id);
       _products.add(newProduct);
@@ -95,7 +105,7 @@ class ProductsModel extends ConnectedProductsModel {
   }
 
   Future<bool> updateProduct(String title, String description, String image,
-      double price, bool isFavorite) {
+      double price, LocationData locData) {
     _isLoading = true;
     notifyListeners();
     final Map<String, dynamic> updatedData = {
@@ -103,6 +113,9 @@ class ProductsModel extends ConnectedProductsModel {
       'description': description,
       'image': 'https://i.imgur.com/34qXMRk.jpg',
       'price': price,
+      'loc_lat': locData.latitude,
+      'loc_lng': locData.longitude,
+      'loc_address': locData.address,
       'userEmail': selectedProduct.userEmail,
       'userId': selectedProduct.userId
     };
@@ -119,7 +132,7 @@ class ProductsModel extends ConnectedProductsModel {
           description: description,
           image: image,
           price: price,
-          isFavorite: isFavorite,
+          location: locData,
           userEmail: selectedProduct.userEmail,
           userId: selectedProduct.userId);
       _products[selectedProductIndex] = updatedProduct;
@@ -132,20 +145,49 @@ class ProductsModel extends ConnectedProductsModel {
     });
   }
 
-  void toggleProductFavoriteStatus() {
+  void toggleProductFavoriteStatus() async {
     final bool isCurrentlyFavorite = selectedProduct.isFavorite;
     final bool newFavoriteStatus = !isCurrentlyFavorite;
+
     final Product updatedProduct = Product(
         id: selectedProduct.id,
         title: selectedProduct.title,
         description: selectedProduct.description,
         price: selectedProduct.price,
         image: selectedProduct.image,
+        location: selectedProduct.location,
         userEmail: selectedProduct.userEmail,
         userId: selectedProduct.userId,
         isFavorite: newFavoriteStatus);
     _products[selectedProductIndex] = updatedProduct;
     notifyListeners();
+
+    http.Response response;
+    if (newFavoriteStatus) {
+      response = await http.put(
+          'https://flutter-products-b5176.firebaseio.com/products/${selectedProduct.id}/wishListUsers/${_authenticatedUser.id}.json?auth=${_authenticatedUser.token}',
+          body: json.encode(true));
+    } else {
+      response = await http.delete(
+        'https://flutter-products-b5176.firebaseio.com/products/${selectedProduct.id}/wishListUsers/${_authenticatedUser.id}.json?auth=${_authenticatedUser.token}',
+      );
+    }
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      //..
+      final Product updatedProduct = Product(
+          id: selectedProduct.id,
+          title: selectedProduct.title,
+          description: selectedProduct.description,
+          price: selectedProduct.price,
+          image: selectedProduct.image,
+          location: selectedProduct.location,
+          userEmail: selectedProduct.userEmail,
+          userId: selectedProduct.userId,
+          isFavorite: !newFavoriteStatus);
+      _products[selectedProductIndex] = updatedProduct;
+      notifyListeners();
+    }
   }
 
   Future<bool> deleteProduct() {
@@ -168,7 +210,7 @@ class ProductsModel extends ConnectedProductsModel {
     });
   }
 
-  Future<Null> fetchProducts() {
+  Future<Null> fetchProducts({onlyForUser = false}) {
     _isLoading = true;
     notifyListeners();
     return http
@@ -191,11 +233,24 @@ class ProductsModel extends ConnectedProductsModel {
             description: productData['description'],
             image: productData['image'],
             price: productData['price'],
+            location: LocationData(
+              latitude: productData['loc_lat'],
+              longitude: productData['loc_lng'],
+              address: productData['loc_address'],
+            ),
             userEmail: productData['userEmail'],
-            userId: productData['userId']);
+            userId: productData['userId'],
+            isFavorite: productData['wishListUsers'] == null
+                ? false
+                : (productData['wishListUsers'] as Map<String, dynamic>)
+                    .containsKey(_authenticatedUser.id));
         fetchedProductList.add(product);
       });
-      _products = fetchedProductList;
+      _products = onlyForUser
+          ? fetchedProductList.where((Product product) {
+              return product.userId == _authenticatedUser.id;
+            }).toList()
+          : fetchedProductList;
       _isLoading = false;
       notifyListeners();
       _selectedProductId = null;
@@ -208,6 +263,9 @@ class ProductsModel extends ConnectedProductsModel {
 
   void selectProduct(String productId) {
     _selectedProductId = productId;
+    if (productId == null) {
+      return;
+    }
     notifyListeners();
   }
 

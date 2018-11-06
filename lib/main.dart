@@ -7,9 +7,11 @@ import 'package:flutter_course/pages/products_admin.dart';
 import 'package:flutter_course/pages/products.dart';
 import 'package:flutter_course/models/product.dart';
 import 'package:flutter_course/pages/product.dart';
+import 'package:map_view/map_view.dart';
 
 void main() {
   // debugPaintSizeEnabled = true;
+  MapView.setApiKey("AIzaSyDRuAzjz4dLpeQnvW4D8qZ7mX-G0pAZEcI");
   runApp(MyApp());
 }
 

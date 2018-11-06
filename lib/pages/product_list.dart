@@ -17,7 +17,7 @@ class ProductListPage extends StatefulWidget {
 
 class ProductListPageState extends State<ProductListPage> {
   initState() {
-    widget.model.fetchProducts();
+    widget.model.fetchProducts(onlyForUser: true);
     super.initState();
   }
 
@@ -29,7 +29,9 @@ class ProductListPageState extends State<ProductListPage> {
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (BuildContext context) {
           return ProductEditPage();
-        }));
+        })).then((_) {
+          model.selectProduct(null);
+        });
       },
     );
   }

@@ -1,8 +1,15 @@
+//flutter & dart packages
 import 'package:flutter/material.dart';
+
+//third party libraries
 import 'package:scoped_model/scoped_model.dart';
+
+//current project files
 import 'package:flutter_course/widgets/helpers/ensure_visible.dart';
 import 'package:flutter_course/scopped_models/main.dart';
 import 'package:flutter_course/models/product.dart';
+import 'package:flutter_course/widgets/form_inputs/location.dart';
+import 'package:flutter_course/models/location_data.dart';
 
 class ProductEditPage extends StatefulWidget {
   @override
@@ -16,7 +23,8 @@ class _ProductStatePage extends State<ProductEditPage> {
     'title': null,
     'description': null,
     'price': null,
-    'image': 'assets/images/food.jpg'
+    'image': 'assets/images/food.jpg',
+    'location': null
   };
   GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _titleFocusNode = FocusNode();
@@ -93,7 +101,6 @@ class _ProductStatePage extends State<ProductEditPage> {
               onPressed: () => _submitForm(
                   model.addProduct,
                   model.updateProduct,
-                  model.selectedProduct,
                   model.selectProduct,
                   model.selectedProductIndex),
             );
@@ -121,6 +128,10 @@ class _ProductStatePage extends State<ProductEditPage> {
               SizedBox(
                 height: 10.0,
               ),
+              LocatoinInput(_setLocation, product),
+              SizedBox(
+                height: 10.0,
+              ),
               _buildSubmitButton(),
             ],
           ),
@@ -129,8 +140,12 @@ class _ProductStatePage extends State<ProductEditPage> {
     );
   }
 
-  void _submitForm(Function addProduct, Function updateProduct,
-      Product currentProduct, Function selectProduct,
+  void _setLocation(LocationData locData) {
+    _formData['location'] = locData;
+  }
+
+  void _submitForm(
+      Function addProduct, Function updateProduct, Function selectProduct,
       [int selectedProductIndex]) {
     if (!_formKey.currentState.validate()) {
       return;
@@ -143,6 +158,7 @@ class _ProductStatePage extends State<ProductEditPage> {
         _formData['description'],
         _formData['image'],
         _formData['price'],
+        _formData['location'],
       ).then((bool success) {
         if (success) {
           Navigator.pushReplacementNamed(context, '/')
@@ -170,7 +186,7 @@ class _ProductStatePage extends State<ProductEditPage> {
         _formData['description'],
         _formData['image'],
         _formData['price'],
-        currentProduct.isFavorite,
+        _formData['location'],
       ).then((_) => Navigator.pushReplacementNamed(context, '/')
           .then((_) => selectProduct(null)));
     }
