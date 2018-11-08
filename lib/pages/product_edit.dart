@@ -1,4 +1,5 @@
 //flutter & dart packages
+import 'dart:io';
 import 'package:flutter/material.dart';
 
 //third party libraries
@@ -9,6 +10,7 @@ import 'package:flutter_course/widgets/helpers/ensure_visible.dart';
 import 'package:flutter_course/scopped_models/main.dart';
 import 'package:flutter_course/models/product.dart';
 import 'package:flutter_course/widgets/form_inputs/location.dart';
+import 'package:flutter_course/widgets/form_inputs/image.dart';
 import 'package:flutter_course/models/location_data.dart';
 
 class ProductEditPage extends StatefulWidget {
@@ -23,21 +25,35 @@ class _ProductStatePage extends State<ProductEditPage> {
     'title': null,
     'description': null,
     'price': null,
-    'image': 'assets/images/food.jpg',
+    'image': null,
     'location': null
   };
   GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _titleFocusNode = FocusNode();
   final _descriptionFocusNode = FocusNode();
   final _priceFocusNode = FocusNode();
+  final _titleTextController = TextEditingController();
+  final _descriptionTextController = TextEditingController();
 
   Widget _buildTitleTextField(Product product) {
+    if (product == null && _titleTextController.text.trim() == '') {
+      _titleTextController.text = '';
+    } else if (product != null && _titleTextController.text.trim() == '') {
+      _titleTextController.text = product.title;
+    } else if (product != null && _titleTextController.text.trim() != '') {
+      _titleTextController.text = _titleTextController.text;
+    } else if (product == null && _titleTextController.text.trim() != '') {
+      _titleTextController.text = _titleTextController.text;
+    } else {
+      _titleTextController.text = '';
+    }
     return EnsureVisibleWhenFocused(
         focusNode: _titleFocusNode,
         child: TextFormField(
           focusNode: _titleFocusNode,
           decoration: InputDecoration(labelText: 'Product Title'),
-          initialValue: product == null ? '' : product.title,
+          controller: _titleTextController,
+          // initialValue: product == null ? '' : product.title,
           validator: (String value) {
             if (value.isEmpty || value.length < 5) {
               return 'Title is required and should be 5+ characters long.';
@@ -50,13 +66,29 @@ class _ProductStatePage extends State<ProductEditPage> {
   }
 
   Widget _buildDescriptionTextField(Product product) {
+    if (product == null && _descriptionTextController.text.trim() == '') {
+      _descriptionTextController.text = '';
+    } else if (product != null &&
+        _descriptionTextController.text.trim() == '') {
+      _descriptionTextController.text = product.description;
+    } else if (product != null &&
+        _descriptionTextController.text.trim() != '') {
+      _descriptionTextController.text = _descriptionTextController.text;
+    } else if (product == null &&
+        _descriptionTextController.text.trim() != '') {
+      _descriptionTextController.text = _descriptionTextController.text;
+    } else {
+      _descriptionTextController.text = '';
+    }
+
     return EnsureVisibleWhenFocused(
       focusNode: _descriptionFocusNode,
       child: TextFormField(
         focusNode: _descriptionFocusNode,
         maxLines: 4,
         decoration: InputDecoration(labelText: 'Product Description'),
-        initialValue: product == null ? '' : product.description,
+        controller: _descriptionTextController,
+        // initialValue: product == null ? '' : product.description,
         validator: (String value) {
           if (value.isEmpty || value.length < 10) {
             return 'Description is required and should be 10+ characters long.';
@@ -132,6 +164,10 @@ class _ProductStatePage extends State<ProductEditPage> {
               SizedBox(
                 height: 10.0,
               ),
+              ImageInput(_setImage, product),
+              SizedBox(
+                height: 10.0,
+              ),
               _buildSubmitButton(),
             ],
           ),
@@ -144,18 +180,22 @@ class _ProductStatePage extends State<ProductEditPage> {
     _formData['location'] = locData;
   }
 
+  void _setImage(File image) {
+    _formData['image'] = image;
+  }
+
   void _submitForm(
       Function addProduct, Function updateProduct, Function selectProduct,
       [int selectedProductIndex]) {
-    if (!_formKey.currentState.validate()) {
+    if (!_formKey.currentState.validate() || (_formData['image'] == null && selectedProductIndex == -1)) {
       return;
     }
     _formKey.currentState.save();
 
     if (selectedProductIndex == -1) {
       addProduct(
-        _formData['title'],
-        _formData['description'],
+        _titleTextController.text,
+        _descriptionTextController.text,
         _formData['image'],
         _formData['price'],
         _formData['location'],
@@ -182,8 +222,8 @@ class _ProductStatePage extends State<ProductEditPage> {
       });
     } else {
       updateProduct(
-        _formData['title'],
-        _formData['description'],
+        _titleTextController.text,
+        _descriptionTextController.text,
         _formData['image'],
         _formData['price'],
         _formData['location'],

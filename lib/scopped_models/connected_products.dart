@@ -1,12 +1,15 @@
 //dart packages
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 
 //third_party packages
 import 'package:scoped_model/scoped_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 
 // current project files
 import 'package:flutter_course/models/product.dart';
@@ -14,13 +17,13 @@ import 'package:flutter_course/models/user.dart';
 import 'package:flutter_course/models/auth.dart';
 import 'package:flutter_course/models/location_data.dart';
 
-class ConnectedProductsModel extends Model {
+mixin ConnectedProductsModel on Model {
   List<Product> _products = [];
   User _authenticatedUser;
   bool _isLoading = false;
 }
 
-class ProductsModel extends ConnectedProductsModel {
+mixin ProductsModel on ConnectedProductsModel {
   String _selectedProductId;
   bool _showFavorites = false;
 
@@ -58,21 +61,75 @@ class ProductsModel extends ConnectedProductsModel {
     });
   }
 
-  Future<bool> addProduct(String title, String description, String image,
-      double price, LocationData locData) {
+  Future<Map<String, dynamic>> uploadImage(File image,
+      {String imagePath}) async {
+    final mimeTypeData = lookupMimeType(image.path).split('/');
+    final imageUploadRequest = http.MultipartRequest(
+      'POST',
+      Uri.parse(
+          'https://us-central1-flutter-products-b5176.cloudfunctions.net/storeImage'),
+    );
+    final file = await http.MultipartFile.fromPath(
+      'image',
+      image.path,
+      contentType: MediaType(
+        mimeTypeData[0],
+        mimeTypeData[1],
+      ),
+    );
+
+    imageUploadRequest.files.add(file);
+    if (imagePath != null) {
+      imageUploadRequest.fields['imagePath'] = Uri.encodeComponent(imagePath);
+    }
+    imageUploadRequest.headers['Authorization'] =
+        'Bearer ${_authenticatedUser.token}';
+
+    try {
+      final streamedResponse = await imageUploadRequest.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        print('Something went wrong.');
+        print(json.decode(response.body));
+        return null;
+      }
+
+      final responseData = json.decode(response.body);
+      return responseData;
+    } catch (error) {
+      print('---------------error------------');
+      print(error);
+      return null;
+    }
+
+    // return null;
+  }
+
+  Future<bool> addProduct(String title, String description, File image,
+      double price, LocationData locData) async {
+    _isLoading = true;
+    notifyListeners();
+    print('----------------- start uploadData--------------------');
+    final uploadedData = await uploadImage(image);
+    print('-----------------finish uploadData--------------------');
+    print(uploadedData);
+    if (uploadedData == null) {
+      print('Image upload failed.');
+      return false;
+    }
     final Map<String, dynamic> productData = {
       'title': title,
       'description': description,
-      'image': 'https://i.imgur.com/34qXMRk.jpg',
       'price': price,
+      'imageUrl': uploadedData['imageUrl'],
+      'imagePath': uploadedData['imagePath'],
       'userEmail': _authenticatedUser.email,
       'userId': _authenticatedUser.id,
       'loc_lat': locData.latitude,
       'loc_lng': locData.longitude,
       'loc_address': locData.address,
     };
-    _isLoading = true;
-    notifyListeners();
+
     return http
         .post(
             'https://flutter-products-b5176.firebaseio.com/products.json?auth=${_authenticatedUser.token}',
@@ -88,7 +145,8 @@ class ProductsModel extends ConnectedProductsModel {
           id: responseData['name'],
           title: title,
           description: description,
-          image: image,
+          image: uploadedData['imageUrl'],
+          imagePath: uploadedData['imagePath'],
           price: price,
           location: locData,
           userEmail: _authenticatedUser.email,
@@ -104,14 +162,29 @@ class ProductsModel extends ConnectedProductsModel {
     });
   }
 
-  Future<bool> updateProduct(String title, String description, String image,
-      double price, LocationData locData) {
+  Future<bool> updateProduct(String title, String description, File image,
+      double price, LocationData locData) async {
     _isLoading = true;
     notifyListeners();
+
+    String imageUrl = selectedProduct.image;
+    String imagePath = selectedProduct.imagePath;
+
+    if (image != null) {
+      final uploadedData = await uploadImage(image);
+      if (uploadedData == null) {
+        print('Image upload failed.');
+        return false;
+      }
+      imageUrl = uploadedData['imageUrl'];
+      imagePath = uploadedData['imagePath'];
+    }
+
     final Map<String, dynamic> updatedData = {
       'title': title,
       'description': description,
-      'image': 'https://i.imgur.com/34qXMRk.jpg',
+      'imageUrl': imageUrl,
+      'imagePath': imagePath,
       'price': price,
       'loc_lat': locData.latitude,
       'loc_lng': locData.longitude,
@@ -120,17 +193,17 @@ class ProductsModel extends ConnectedProductsModel {
       'userId': selectedProduct.userId
     };
 
-    return http
-        .put(
-            'https://flutter-products-b5176.firebaseio.com/products/${selectedProduct.id}.json?auth=${_authenticatedUser.token}',
-            body: json.encode(updatedData))
-        .then((http.Response response) {
+    try {
+      await http.put(
+          'https://flutter-products-b5176.firebaseio.com/products/${selectedProduct.id}.json?auth=${_authenticatedUser.token}',
+          body: json.encode(updatedData));
       _isLoading = false;
       final Product updatedProduct = Product(
           id: selectedProduct.id,
           title: title,
           description: description,
-          image: image,
+          image: imageUrl,
+          imagePath: imagePath,
           price: price,
           location: locData,
           userEmail: selectedProduct.userEmail,
@@ -138,11 +211,11 @@ class ProductsModel extends ConnectedProductsModel {
       _products[selectedProductIndex] = updatedProduct;
       notifyListeners();
       return true;
-    }).catchError((error) {
+    } catch (error) {
       _isLoading = false;
       notifyListeners();
       return false;
-    });
+    }
   }
 
   void toggleProductFavoriteStatus() async {
@@ -155,6 +228,7 @@ class ProductsModel extends ConnectedProductsModel {
         description: selectedProduct.description,
         price: selectedProduct.price,
         image: selectedProduct.image,
+        imagePath: selectedProduct.imagePath,
         location: selectedProduct.location,
         userEmail: selectedProduct.userEmail,
         userId: selectedProduct.userId,
@@ -181,6 +255,7 @@ class ProductsModel extends ConnectedProductsModel {
           description: selectedProduct.description,
           price: selectedProduct.price,
           image: selectedProduct.image,
+          imagePath: selectedProduct.imagePath,
           location: selectedProduct.location,
           userEmail: selectedProduct.userEmail,
           userId: selectedProduct.userId,
@@ -231,7 +306,8 @@ class ProductsModel extends ConnectedProductsModel {
             id: productId,
             title: productData['title'],
             description: productData['description'],
-            image: productData['image'],
+            image: productData['imageUrl'],
+            imagePath: productData['imagePath'],
             price: productData['price'],
             location: LocationData(
               latitude: productData['loc_lat'],
@@ -275,7 +351,7 @@ class ProductsModel extends ConnectedProductsModel {
   }
 }
 
-class UserModel extends ConnectedProductsModel {
+mixin UserModel on ConnectedProductsModel {
   Timer _authTimer;
 
   PublishSubject<bool> _userSubject = PublishSubject();
@@ -383,7 +459,7 @@ class UserModel extends ConnectedProductsModel {
   }
 }
 
-class UtilityModel extends ConnectedProductsModel {
+mixin UtilityModel on ConnectedProductsModel {
   bool get isLoading {
     return _isLoading;
   }
