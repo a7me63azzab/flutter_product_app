@@ -32,11 +32,16 @@ class ProductCard extends StatelessWidget {
         alignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            icon: Icon(Icons.info),
-            color: Theme.of(context).accentColor,
-            onPressed: () => Navigator.pushNamed<bool>(
-                context, '/product/' + model.products[productIndex].id),
-          ),
+              icon: Icon(Icons.info),
+              color: Theme.of(context).accentColor,
+              onPressed: () {
+                model.selectProduct(model.products[productIndex].id);
+                Navigator.pushNamed<bool>(
+                        context, '/product/' + model.products[productIndex].id)
+                    .then(
+                  (_) => model.selectProduct(null),
+                );
+              }),
           IconButton(
             color: Colors.red,
             icon: Icon(model.products[productIndex].isFavorite
@@ -57,11 +62,14 @@ class ProductCard extends StatelessWidget {
     return new Card(
       child: new Column(
         children: [
-          FadeInImage(
-            image: NetworkImage(product.image),
-            height: 300.0,
-            fit: BoxFit.cover,
-            placeholder: AssetImage('assets/images/food.jpg'),
+          Hero(
+            tag: product.id,
+            child: FadeInImage(
+              image: NetworkImage(product.image),
+              height: 300.0,
+              fit: BoxFit.cover,
+              placeholder: AssetImage('assets/images/food.jpg'),
+            ),
           ),
           _buildTiltPriceRow(),
           AddressTag(product.location.address),

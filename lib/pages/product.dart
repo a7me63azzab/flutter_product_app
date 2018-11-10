@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_course/widgets/ui_elements/title_default.dart';
+import 'package:flutter_course/widgets/products/product_fab.dart';
 import 'package:flutter_course/models/product.dart';
 import 'package:map_view/map_view.dart';
 
@@ -68,31 +69,47 @@ class ProductPage extends StatelessWidget {
           return Future.value(false);
         },
         child: Scaffold(
-          appBar: AppBar(
-            title: new Text(product.title),
-          ),
-          body: new Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                FadeInImage(
-                  image: NetworkImage(product.image),
-                  height: 300.0,
-                  fit: BoxFit.cover,
-                  placeholder: AssetImage('assets/images/food.jpg'),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(10.0),
-                  child: TitleDefault(product.title),
-                ),
-                _buildAddressPriceRow(product),
-                Container(
-                  padding: EdgeInsets.all(10.0),
-                  child: Text(
-                    product.description,
-                    textAlign: TextAlign.center,
+          // appBar: AppBar(
+          //   title: new Text(product.title),
+          // ),
+          body: CustomScrollView(
+            slivers: <Widget>[
+              SliverAppBar(
+                expandedHeight: 265.0,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(
+                  title: new Text(product.title),
+                  background: Hero(
+                    tag: product.id,
+                    child: FadeInImage(
+                      image: NetworkImage(product.image),
+                      height: 300.0,
+                      fit: BoxFit.cover,
+                      placeholder: AssetImage('assets/images/food.jpg'),
+                    ),
                   ),
                 ),
-              ]),
+              ),
+              SliverList(
+                delegate: SliverChildListDelegate([
+                  Container(
+                    padding: const EdgeInsets.all(10.0),
+                    alignment: Alignment.center,
+                    child: TitleDefault(product.title),
+                  ),
+                  _buildAddressPriceRow(product),
+                  Container(
+                    padding: EdgeInsets.all(10.0),
+                    child: Text(
+                      product.description,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ]),
+              )
+            ],
+          ),
+          floatingActionButton: ProductFAB(product),
         ));
   }
 }

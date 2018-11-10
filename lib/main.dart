@@ -8,6 +8,7 @@ import 'package:flutter_course/pages/products.dart';
 import 'package:flutter_course/models/product.dart';
 import 'package:flutter_course/pages/product.dart';
 import 'package:map_view/map_view.dart';
+import 'package:flutter_course/widgets/helpers/custom_route.dart';
 
 void main() {
   // debugPaintSizeEnabled = true;
@@ -73,7 +74,7 @@ class _MyAppState extends State<MyApp> {
                   _model.products.firstWhere((Product product) {
                 return product.id == productId;
               });
-              return MaterialPageRoute<bool>(
+              return CustomeRoute<bool>(
                 builder: (BuildContext context) =>
                     !_isAuthenticated ? AuthPage() : ProductPage(product),
               );
